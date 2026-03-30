@@ -22,22 +22,24 @@ static void init_colors(void) {
     start_color();
     use_default_colors();
     
-    // UI Elements
-    init_pair(COLOR_BORDER, COLOR_CYAN, -1);
-    init_pair(COLOR_SELECTED, COLOR_WHITE, COLOR_BLUE);
-    init_pair(COLOR_STATUS, COLOR_WHITE, COLOR_BLUE);
-    init_pair(COLOR_PREVIEW, COLOR_GREEN, -1);
+    // Nord-inspired dark theme palette
+    // Background: #2E3440 (Nord dark), Foreground: #D8DEE9
+    // Colors: 0=black, 1=red, 2=green, 3=yellow, 4=blue, 5=magenta, 6=cyan, 7=white
     
-    // File types with background highlighting
-    init_pair(COLOR_PARENT, COLOR_MAGENTA, COLOR_BLACK);
-    init_pair(COLOR_DIR, COLOR_BLUE, -1);
-    init_pair(COLOR_SYMLINK, COLOR_CYAN, -1);
-    init_pair(COLOR_EXEC, COLOR_GREEN, -1);
-    init_pair(COLOR_FILE, COLOR_WHITE, -1);
-    init_pair(COLOR_HIDDEN, COLOR_BLACK, -1);
-    init_pair(COLOR_ARCHIVE, COLOR_RED, -1);
-    init_pair(COLOR_MEDIA, COLOR_MAGENTA, -1);
-    init_pair(COLOR_CODE, COLOR_YELLOW, -1);
+    init_pair(COLOR_BORDER, 14, -1);       // Nord polar night (bright blue-gray)
+    init_pair(COLOR_SELECTED, 0, 11);      // White on red (warning accent)
+    init_pair(COLOR_STATUS, 15, 8);        // Nord dark with white text
+    init_pair(COLOR_PREVIEW, 12, -1);      // Nord frost cyan
+    
+    init_pair(COLOR_PARENT, 13, -1);       // Nord purple
+    init_pair(COLOR_DIR, 6, -1);           // Nord frost cyan (directories)
+    init_pair(COLOR_SYMLINK, 14, -1);      // Nord frost blue
+    init_pair(COLOR_EXEC, 10, -1);         // Nord green (executable)
+    init_pair(COLOR_FILE, 7, -1);         // Nord snow storm (white)
+    init_pair(COLOR_HIDDEN, 8, -1);       // Dim gray
+    init_pair(COLOR_ARCHIVE, 1, -1);      // Nord red (archives)
+    init_pair(COLOR_MEDIA, 5, -1);        // Nord magenta (media)
+    init_pair(COLOR_CODE, 3, -1);         // Nord yellow (code)
 }
 
 static void format_date(time_t t, char *buf, size_t len) {
@@ -79,11 +81,13 @@ int ui_progress(const char *title, const char *filename, uint64_t done, uint64_t
         mvwaddch(stdscr, y + i, x, ' ');
         mvwaddch(stdscr, y + i, x + w - 1, ' ');
     }
-    mvwaddch(stdscr, y, x, ACS_ULCORNER);
-    mvwaddch(stdscr, y, x + w - 1, ACS_URCORNER);
-    mvwaddch(stdscr, y + h - 1, x, ACS_LLCORNER);
-    mvwaddch(stdscr, y + h - 1, x + w - 1, ACS_LRCORNER);
-    whline(stdscr, ACS_HLINE, w - 2);
+    mvwaddch(stdscr, y, x, 0x256D);
+    mvwaddch(stdscr, y, x + w - 1, 0x256E);
+    mvwaddch(stdscr, y + h - 1, x, 0x2570);
+    mvwaddch(stdscr, y + h - 1, x + w - 1, 0x256F);
+    mvwaddch(stdscr, y, x + w - 1, 0x256E);
+    mvwaddch(stdscr, y + h - 1, x, 0x2570);
+    whline(stdscr, 0x2500, w - 2);
     mvwaddch(stdscr, y, x + w - 1, ACS_URCORNER);
     
     mvwprintw(stdscr, y, x + 2, "%s", title);
@@ -178,40 +182,116 @@ void ui_draw(void) {
     ui_draw_preview(&g_state.panels[g_state.active], x, l.height - l.preview_height - 1, l.panel_width, l.preview_height);
     ui_draw_preview(&g_state.panels[1 - g_state.active], x + l.panel_width + 1, l.height - l.preview_height - 1, l.panel_width, l.preview_height);
     
-    // Draw status bar
     Panel *active = &g_state.panels[g_state.active];
-    char left_status[128];
+    char left_status[256];
     int sel_count = panel_get_selected_count(active);
     uint64_t total_size = panel_get_total_size(active);
+    uint64_t selected_size = panel_get_selected_size(active);
     
+    char size_str[32], sel_str[32];
     if (total_size < 1024 * 1024) {
-        snprintf(left_status, sizeof(left_status), "%d files, %d sel, %luK | Sort:%s%s", 
-                 active->count, sel_count, (unsigned long)(total_size / 1024),
-                 panel_get_sort_name(active), active->sort_reverse ? "r" : "");
+        snprintf(size_str, sizeof(size_str), "%luK", (unsigned long)(total_size / 1024));
     } else if (total_size < 1024ULL * 1024 * 1024) {
-        snprintf(left_status, sizeof(left_status), "%d files, %d sel, %luM | Sort:%s%s", 
-                 active->count, sel_count, (unsigned long)(total_size / (1024 * 1024)),
-                 panel_get_sort_name(active), active->sort_reverse ? "r" : "");
+        snprintf(size_str, sizeof(size_str), "%.1fM", (double)total_size / (1024 * 1024));
     } else {
-        snprintf(left_status, sizeof(left_status), "%d files, %d sel, %luG | Sort:%s%s", 
-                 active->count, sel_count, (unsigned long)(total_size / (1024ULL * 1024 * 1024)),
-                 panel_get_sort_name(active), active->sort_reverse ? "r" : "");
+        snprintf(size_str, sizeof(size_str), "%.1fG", (double)total_size / (1024ULL * 1024 * 1024));
     }
+    
+    if (selected_size > 0) {
+        if (selected_size < 1024 * 1024) {
+            snprintf(sel_str, sizeof(sel_str), "│ %d selected (%luK)", sel_count, (unsigned long)(selected_size / 1024));
+        } else if (selected_size < 1024ULL * 1024 * 1024) {
+            snprintf(sel_str, sizeof(sel_str), "│ %d selected (%.1fM)", sel_count, (double)selected_size / (1024 * 1024));
+        } else {
+            snprintf(sel_str, sizeof(sel_str), "│ %d selected (%.1fG)", sel_count, (double)selected_size / (1024ULL * 1024 * 1024));
+        }
+    } else {
+        sel_str[0] = '\0';
+    }
+    
+    snprintf(left_status, sizeof(left_status), "%d items %s%s │ %s%s",
+             active->count, size_str, sel_str,
+             panel_get_sort_name(active), active->sort_reverse ? " ↓" : " ↑");
+    
+    time_t now = time(NULL);
+    struct tm *tm = localtime(&now);
+    char time_str[16];
+    strftime(time_str, sizeof(time_str), "%H:%M", tm);
     
     attron(COLOR_PAIR(COLOR_STATUS));
     mvhline(l.height - 1, 0, ' ', l.width);
     mvprintw(l.height - 1, 0, " %s", left_status);
+    mvprintw(l.height - 1, l.width - 6, " %s ", time_str);
     
     const char *keys = "F1Help F3View F5Copy F6Move F7MkDir F8Del F9Quit";
-    mvprintw(l.height - 1, l.width - strlen(keys) - 1, "%s ", keys);
+    mvprintw(l.height - 1, l.width - strlen(keys) - 7, "%s ", keys);
     
     if (g_state.status_msg[0]) {
         int msg_x = (l.width - strlen(g_state.status_msg)) / 2;
         mvprintw(l.height - 1, msg_x, " %s ", g_state.status_msg);
+    } else {
+        DirEntry *e = &active->entries[active->cursor];
+        char hint[128] = "";
+        if (e->type == ENTRY_DIR) snprintf(hint, sizeof(hint), "Enter: open  Back: parent");
+        else if (e->type == ENTRY_PARENT) snprintf(hint, sizeof(hint), "Back: go up");
+        else snprintf(hint, sizeof(hint), "F3: preview  F5: copy  F6: move");
+        
+        int hint_x = l.width - strlen(keys) - strlen(hint) - 10;
+        if (hint_x > 40) {
+            attron(A_DIM);
+            mvprintw(l.height - 1, hint_x, " %s ", hint);
+            attroff(A_DIM);
+        }
     }
     attroff(COLOR_PAIR(COLOR_STATUS));
     
     refresh();
+}
+
+static const char* get_file_icon(const char *name, EntryType type) {
+    if (type == ENTRY_PARENT) return "..";
+    if (type == ENTRY_DIR) return "📁";
+    if (type == ENTRY_SYMLINK) return "🔗";
+    
+    const char *ext = strrchr(name, '.');
+    if (!ext) return "📄";
+    ext++;
+    
+    if (strcasecmp(ext, "zip") == 0 || strcasecmp(ext, "tar") == 0 ||
+        strcasecmp(ext, "gz") == 0 || strcasecmp(ext, "bz2") == 0 ||
+        strcasecmp(ext, "xz") == 0 || strcasecmp(ext, "7z") == 0 ||
+        strcasecmp(ext, "rar") == 0) return "📦";
+    
+    if (strcasecmp(ext, "jpg") == 0 || strcasecmp(ext, "jpeg") == 0 ||
+        strcasecmp(ext, "png") == 0 || strcasecmp(ext, "gif") == 0 ||
+        strcasecmp(ext, "bmp") == 0 || strcasecmp(ext, "svg") == 0 ||
+        strcasecmp(ext, "webp") == 0 || strcasecmp(ext, "ico") == 0) return "🖼️";
+    
+    if (strcasecmp(ext, "mp3") == 0 || strcasecmp(ext, "wav") == 0 ||
+        strcasecmp(ext, "flac") == 0 || strcasecmp(ext, "ogg") == 0 ||
+        strcasecmp(ext, "m4a") == 0 || strcasecmp(ext, "aac") == 0) return "🎵";
+    
+    if (strcasecmp(ext, "mp4") == 0 || strcasecmp(ext, "avi") == 0 ||
+        strcasecmp(ext, "mkv") == 0 || strcasecmp(ext, "mov") == 0 ||
+        strcasecmp(ext, "webm") == 0 || strcasecmp(ext, "flv") == 0) return "🎬";
+    
+    if (strcasecmp(ext, "c") == 0 || strcasecmp(ext, "h") == 0 ||
+        strcasecmp(ext, "cpp") == 0 || strcasecmp(ext, "py") == 0 ||
+        strcasecmp(ext, "js") == 0 || strcasecmp(ext, "ts") == 0 ||
+        strcasecmp(ext, "rs") == 0 || strcasecmp(ext, "go") == 0) return "⚙️";
+    
+    if (strcasecmp(ext, "html") == 0 || strcasecmp(ext, "css") == 0 ||
+        strcasecmp(ext, "json") == 0 || strcasecmp(ext, "xml") == 0) return "🌐";
+    
+    if (strcasecmp(ext, "md") == 0 || strcasecmp(ext, "txt") == 0 ||
+        strcasecmp(ext, "doc") == 0 || strcasecmp(ext, "docx") == 0) return "📝";
+    
+    if (strcasecmp(ext, "pdf") == 0) return "📕";
+    
+    if (strcasecmp(ext, "sh") == 0 || strcasecmp(ext, "bash") == 0 ||
+        strcasecmp(ext, "zsh") == 0) return "💻";
+    
+    return "📄";
 }
 
 static int get_file_color(const char *name, EntryType type) {
@@ -223,7 +303,6 @@ static int get_file_color(const char *name, EntryType type) {
     if (!ext) return COLOR_FILE;
     ext++;
     
-    // Archives
     if (strcasecmp(ext, "zip") == 0 || strcasecmp(ext, "tar") == 0 ||
         strcasecmp(ext, "gz") == 0 || strcasecmp(ext, "bz2") == 0 ||
         strcasecmp(ext, "xz") == 0 || strcasecmp(ext, "7z") == 0 ||
@@ -231,7 +310,6 @@ static int get_file_color(const char *name, EntryType type) {
         return COLOR_ARCHIVE;
     }
     
-    // Media
     if (strcasecmp(ext, "jpg") == 0 || strcasecmp(ext, "jpeg") == 0 ||
         strcasecmp(ext, "png") == 0 || strcasecmp(ext, "gif") == 0 ||
         strcasecmp(ext, "mp3") == 0 || strcasecmp(ext, "mp4") == 0 ||
@@ -239,7 +317,6 @@ static int get_file_color(const char *name, EntryType type) {
         return COLOR_MEDIA;
     }
     
-    // Code
     if (strcasecmp(ext, "c") == 0 || strcasecmp(ext, "h") == 0 ||
         strcasecmp(ext, "cpp") == 0 || strcasecmp(ext, "py") == 0 ||
         strcasecmp(ext, "js") == 0 || strcasecmp(ext, "html") == 0 ||
@@ -251,16 +328,30 @@ static int get_file_color(const char *name, EntryType type) {
     return COLOR_FILE;
 }
 
+static char* shorten_path(const char *path) {
+    static char shortened[MAX_PATH];
+    const char *home = getenv("HOME");
+    if (home && strncmp(path, home, strlen(home)) == 0) {
+        snprintf(shortened, sizeof(shortened), "~%s", path + strlen(home));
+    } else if (strlen(path) > 40) {
+        snprintf(shortened, sizeof(shortened), "...%s", path + strlen(path) - 37);
+    } else {
+        strncpy(shortened, path, sizeof(shortened) - 1);
+        shortened[sizeof(shortened) - 1] = '\0';
+    }
+    return shortened;
+}
+
 void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
     attron(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
-    mvhline(y, x, ACS_HLINE, w);
-    mvhline(y + h - 1, x, ACS_HLINE, w);
-    mvvline(y, x, ACS_VLINE, h);
-    mvvline(y, x + w - 1, ACS_VLINE, h);
-    mvaddch(y, x, ACS_ULCORNER);
-    mvaddch(y, x + w - 1, ACS_URCORNER);
-    mvaddch(y + h - 1, x, ACS_LLCORNER);
-    mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
+    mvhline(y, x, 0x2500, w);
+    mvhline(y + h - 1, x, 0x2500, w);
+    mvvline(y, x, 0x2502, h);
+    mvvline(y, x + w - 1, 0x2502, h);
+    mvaddch(y, x, 0x256D);
+    mvaddch(y, x + w - 1, 0x256E);
+    mvaddch(y + h - 1, x, 0x2570);
+    mvaddch(y + h - 1, x + w - 1, 0x256F);
     attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
 
     if (active) {
@@ -269,7 +360,7 @@ void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
         attron(COLOR_PAIR(COLOR_BORDER));
     }
     char title[MAX_PATH];
-    snprintf(title, sizeof(title), " %.40s ", p->path);
+    snprintf(title, sizeof(title), " %.38s ", shorten_path(p->path));
     mvprintw(y, x + (w - (int)strlen(title)) / 2, "%s", title);
     if (active) {
         attroff(A_BOLD | COLOR_PAIR(COLOR_BORDER));
@@ -278,10 +369,10 @@ void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
     }
 
     int date_w = 12;
-    int size_w = 5;
-    int type_w = 4;
+    int size_w = 6;
+    int icon_w = 4;
     int marker_w = 2;
-    int name_w = w - date_w - size_w - type_w - marker_w - 6;
+    int name_w = w - date_w - size_w - icon_w - marker_w - 6;
     if (name_w < 10) name_w = 10;
 
     for (int i = 0; i < h - 2 && i + p->scroll_offset < p->count; i++) {
@@ -290,14 +381,11 @@ void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
         bool is_cursor = (idx == p->cursor);
         int file_color = get_file_color(e->name, e->type);
 
-        // Clear the line first
         mvhline(y + 1 + i, x + 1, ' ', w - 2);
 
         if (active && is_cursor) {
-            // Selected item gets full background highlight
             attron(COLOR_PAIR(COLOR_SELECTED) | A_BOLD);
         } else {
-            // Non-selected items get subtle color coding
             if (e->type == ENTRY_PARENT) {
                 attron(COLOR_PAIR(COLOR_PARENT) | A_BOLD);
             } else if (e->type == ENTRY_DIR) {
@@ -311,38 +399,36 @@ void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
 
         char datebuf[16];
         char sizebuf[8];
-        const char *typestr;
+        const char *icon;
 
         format_date(e->mtime, datebuf, sizeof(datebuf));
 
+        icon = get_file_icon(e->name, e->type);
+
         if (e->type == ENTRY_PARENT) {
-            typestr = "<UP>";
-            strcpy(sizebuf, "    ");
+            strcpy(sizebuf, "     ");
         } else if (e->type == ENTRY_DIR) {
-            typestr = "DIR ";
-            strcpy(sizebuf, "    ");
+            strcpy(sizebuf, "     ");
         } else if (e->type == ENTRY_SYMLINK) {
-            typestr = "LNK ";
-            strcpy(sizebuf, "    ");
+            strcpy(sizebuf, "     ");
         } else {
-            typestr = "    ";
             if (e->size < 1024) {
-                snprintf(sizebuf, sizeof(sizebuf), "%3luB", (unsigned long)e->size);
+                snprintf(sizebuf, sizeof(sizebuf), "%5luB", (unsigned long)e->size);
             } else if (e->size < 1024 * 1024) {
-                snprintf(sizebuf, sizeof(sizebuf), "%3luK", (unsigned long)(e->size / 1024));
+                snprintf(sizebuf, sizeof(sizebuf), "%4.1fK", (double)e->size / 1024);
             } else if (e->size < 1024ULL * 1024 * 1024) {
-                snprintf(sizebuf, sizeof(sizebuf), "%3luM", (unsigned long)(e->size / (1024 * 1024)));
+                snprintf(sizebuf, sizeof(sizebuf), "%4.1fM", (double)e->size / (1024 * 1024));
             } else {
-                snprintf(sizebuf, sizeof(sizebuf), "%3luG", (unsigned long)(e->size / (1024ULL * 1024 * 1024)));
+                snprintf(sizebuf, sizeof(sizebuf), "%4.1fG", (double)e->size / (1024ULL * 1024 * 1024));
             }
         }
 
-        mvprintw(y + 1 + i, x + 1, "%c%c%s %-*.*s %*s %s",
+        mvprintw(y + 1 + i, x + 1, "%c%c%s %-*.*s %s %s",
                  is_cursor ? '>' : ' ',
                  e->selected ? '*' : ' ',
-                 typestr,
+                 icon,
                  name_w, name_w, e->name,
-                 size_w, sizebuf,
+                 sizebuf,
                  datebuf);
 
         if (active && is_cursor) {
@@ -366,7 +452,7 @@ void ui_draw_preview(Panel *p, int x, int y, int w, int h) {
     DirEntry *e = &p->entries[p->cursor];
     
     attron(COLOR_PAIR(COLOR_BORDER));
-    mvhline(y, x, ACS_HLINE, w);
+    mvhline(y, x, 0x2500, w);
     attroff(COLOR_PAIR(COLOR_BORDER));
     
     char *path = pl_path_join(p->path, e->name);
