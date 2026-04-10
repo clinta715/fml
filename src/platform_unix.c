@@ -56,7 +56,7 @@ int pl_list_dir(const char *path, PlatformDirEntry **entries, int *count) {
     
     struct dirent *de;
     while ((de = readdir(dir)) != NULL) {
-        if (de->d_name[0] == '.' && de->d_name[1] == '\0') continue;
+        if (de->d_name[0] == '.' && (de->d_name[1] == '\0' || (de->d_name[1] == '.' && de->d_name[2] == '\0'))) continue;
         
         if (*count >= cap) {
             cap *= 2;
@@ -109,6 +109,16 @@ time_t pl_file_mtime(const char *path) {
 }
 
 int pl_copy_file(const char *src, const char *dst) {
+    struct stat st_src, st_dst;
+    if (stat(src, &st_src) != 0) return -1;
+    
+    // Check if source and destination are the same file
+    if (stat(dst, &st_dst) == 0) {
+        if (st_src.st_dev == st_dst.st_dev && st_src.st_ino == st_dst.st_ino) {
+            return 0; // Same file, nothing to do
+        }
+    }
+
     FILE *in = fopen(src, "rb");
     if (!in) return -1;
     FILE *out = fopen(dst, "wb");
@@ -123,10 +133,7 @@ int pl_copy_file(const char *src, const char *dst) {
     fclose(in);
     fclose(out);
     
-    struct stat st;
-    if (stat(src, &st) == 0) {
-        chmod(dst, st.st_mode & 0777);
-    }
+    chmod(dst, st_src.st_mode & 0777);
     return 0;
 }
 
@@ -154,7 +161,21 @@ int pl_copy_dir(const char *src, const char *dst) {
 }
 
 int pl_move(const char *src, const char *dst) {
-    return rename(src, dst);
+    if (rename(src, dst) == 0) return 0;
+    
+    // Cross-filesystem move fallback
+    if (errno == EXDEV) {
+        if (pl_is_dir(src)) {
+            if (pl_copy_dir(src, dst) == 0) {
+                return pl_delete(src);
+            }
+        } else {
+            if (pl_copy_file(src, dst) == 0) {
+                return unlink(src);
+            }
+        }
+    }
+    return -1;
 }
 
 int pl_delete(const char *path) {
@@ -213,6 +234,16 @@ char *pl_read_file(const char *path, size_t max_bytes, size_t *out_len) {
 }
 
 int pl_copy_file_progress(const char *src, const char *dst, ProgressCallback cb, void *userdata) {
+    struct stat st_src, st_dst;
+    if (stat(src, &st_src) != 0) return -1;
+    
+    // Check if source and destination are the same file
+    if (stat(dst, &st_dst) == 0) {
+        if (st_src.st_dev == st_dst.st_dev && st_src.st_ino == st_dst.st_ino) {
+            return 0; // Same file, nothing to do
+        }
+    }
+
     FILE *in = fopen(src, "rb");
     if (!in) return -1;
     FILE *out = fopen(dst, "wb");
@@ -240,10 +271,7 @@ int pl_copy_file_progress(const char *src, const char *dst, ProgressCallback cb,
     fclose(in);
     fclose(out);
     
-    struct stat st;
-    if (stat(src, &st) == 0) {
-        chmod(dst, st.st_mode & 0777);
-    }
+    chmod(dst, st_src.st_mode & 0777);
     return 0;
 }
 

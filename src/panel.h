@@ -8,6 +8,7 @@ void panel_free(Panel *p);
 int panel_refresh(Panel *p);
 int panel_cursor_up(Panel *p);
 int panel_cursor_down(Panel *p);
+void panel_ensure_visible(Panel *p, int vis_lines);
 int panel_enter(Panel *p);
 int panel_parent(Panel *p);
 int panel_goto(Panel *p, const char *path);

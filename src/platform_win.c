@@ -61,7 +61,7 @@ int pl_list_dir(const char *path, PlatformDirEntry **entries, int *count) {
     *count = 0;
     
     do {
-        if (strcmp(fd.cFileName, ".") == 0) continue;
+        if (strcmp(fd.cFileName, ".") == 0 || strcmp(fd.cFileName, "..") == 0) continue;
         
         if (*count >= cap) {
             cap *= 2;
@@ -140,7 +140,7 @@ int pl_copy_dir(const char *src, const char *dst) {
 }
 
 int pl_move(const char *src, const char *dst) {
-    return MoveFileA(src, dst) ? 0 : -1;
+    return MoveFileExA(src, dst, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING) ? 0 : -1;
 }
 
 int pl_delete(const char *path) {

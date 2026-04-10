@@ -11,14 +11,17 @@ static int copy_progress_cb(uint64_t done, uint64_t total, const char *fn, void 
 
 int fileops_copy(Panel *src, Panel *dst) {
     int selected = panel_get_selected_count(src);
-    if (selected == 0) {
-        if (src->count == 0) return -1;
-        selected = 1;
-    }
+    bool use_cursor = (selected == 0);
+    
+    if (use_cursor && src->count == 0) return -1;
     
     for (int i = 0; i < src->count; i++) {
         DirEntry *e = &src->entries[i];
-        if (!e->selected && i != src->cursor) continue;
+        if (use_cursor) {
+            if (i != src->cursor) continue;
+        } else {
+            if (!e->selected) continue;
+        }
         
         char *src_path = pl_path_join(src->path, e->name);
         char *dst_path = pl_path_join(dst->path, e->name);
@@ -31,13 +34,8 @@ int fileops_copy(Panel *src, Panel *dst) {
         } else if (archive_is_supported(e->name)) {
             ui_draw_status("Extracting archive...");
             ret = archive_extract(src_path, dst->path);
-            free(dst_path);
-            dst_path = pl_path_join(dst->path, e->name);
             if (ret == 0) {
-                size_t len = strlen(dst_path);
-                if (len > 4 && strcasecmp(dst_path + len - 4, ".zip") == 0) {
-                    dst_path[len-4] = '\0';
-                }
+                // If extracted successfully, we don't need to do anything else
             }
         } else {
             ui_draw_status("Copying file...");
@@ -57,21 +55,33 @@ int fileops_copy(Panel *src, Panel *dst) {
     return 0;
 }
 
-int fileops_move(Panel *src, Panel *dst) {
-    DirEntry *e = &src->entries[src->cursor];
+int fileops_move(Panel *src, Panel *dst, const char *newname) {
+    int selected = panel_get_selected_count(src);
+    bool use_cursor = (selected == 0);
     
-    char *src_path = pl_path_join(src->path, e->name);
-    char *dst_path = pl_path_join(dst->path, e->name);
+    if (use_cursor && src->count == 0) return -1;
     
-    ui_draw_status("Moving...");
-    int ret = pl_move(src_path, dst_path);
-    
-    free(src_path);
-    free(dst_path);
-    
-    if (ret != 0) {
-        ui_message("Error", "Failed to move file");
-        return -1;
+    for (int i = 0; i < src->count; i++) {
+        DirEntry *e = &src->entries[i];
+        if (use_cursor) {
+            if (i != src->cursor) continue;
+        } else {
+            if (!e->selected) continue;
+        }
+        
+        char *src_path = pl_path_join(src->path, e->name);
+        char *dst_path = pl_path_join(dst->path, (use_cursor && newname) ? newname : e->name);
+        
+        ui_draw_status("Moving...");
+        int ret = pl_move(src_path, dst_path);
+        
+        free(src_path);
+        free(dst_path);
+        
+        if (ret != 0) {
+            ui_message("Error", "Failed to move file");
+            return -1;
+        }
     }
     
     panel_refresh(src);

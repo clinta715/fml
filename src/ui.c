@@ -23,23 +23,28 @@ static void init_colors(void) {
     use_default_colors();
     
     // Nord-inspired dark theme palette
-    // Background: #2E3440 (Nord dark), Foreground: #D8DEE9
-    // Colors: 0=black, 1=red, 2=green, 3=yellow, 4=blue, 5=magenta, 6=cyan, 7=white
+    // Background: -1 (Default terminal background)
     
-    init_pair(COLOR_BORDER, 14, -1);       // Nord polar night (bright blue-gray)
-    init_pair(COLOR_SELECTED, 0, 11);      // White on red (warning accent)
-    init_pair(COLOR_STATUS, 15, 8);        // Nord dark with white text
-    init_pair(COLOR_PREVIEW, 12, -1);      // Nord frost cyan
+    init_pair(COLOR_BORDER, 14, -1);       // Nord frost blue (borders)
+    init_pair(COLOR_SELECTED, 0, 11);      // Black on yellow (cursor)
+    init_pair(COLOR_STATUS, 15, 8);        // White on dark gray (status bar)
+    init_pair(COLOR_PREVIEW, 12, -1);      // Nord frost cyan (preview)
     
     init_pair(COLOR_PARENT, 13, -1);       // Nord purple
     init_pair(COLOR_DIR, 6, -1);           // Nord frost cyan (directories)
     init_pair(COLOR_SYMLINK, 14, -1);      // Nord frost blue
     init_pair(COLOR_EXEC, 10, -1);         // Nord green (executable)
-    init_pair(COLOR_FILE, 7, -1);         // Nord snow storm (white)
-    init_pair(COLOR_HIDDEN, 8, -1);       // Dim gray
-    init_pair(COLOR_ARCHIVE, 1, -1);      // Nord red (archives)
-    init_pair(COLOR_MEDIA, 5, -1);        // Nord magenta (media)
-    init_pair(COLOR_CODE, 3, -1);         // Nord yellow (code)
+    init_pair(COLOR_FILE, 7, -1);          // Nord snow storm (white)
+    init_pair(COLOR_HIDDEN, 8, -1);        // Dim gray
+    init_pair(COLOR_ARCHIVE, 1, -1);       // Nord red (archives)
+    init_pair(COLOR_MEDIA, 5, -1);         // Nord magenta (media)
+    init_pair(COLOR_CODE, 3, -1);          // Nord yellow (code)
+    
+    // Additional UI colors
+    init_pair(20, 0, 6);                   // Black on cyan (active tab/mode)
+    init_pair(21, 15, 4);                  // White on blue (info/path)
+    init_pair(22, 15, 2);                  // White on green (success/confirm)
+    init_pair(23, 15, 1);                  // White on red (error/warning)
 }
 
 static void format_date(time_t t, char *buf, size_t len) {
@@ -64,45 +69,57 @@ static void format_date(time_t t, char *buf, size_t len) {
 static int g_cancel_requested = 0;
 
 int ui_progress(const char *title, const char *filename, uint64_t done, uint64_t total) {
-    int w = g_layout.width - 10;
+    int w = g_layout.width - 20;
     if (w < 40) w = 40;
-    int h = 5;
+    if (w > 100) w = 100;
+    int h = 7;
     int x = (g_layout.width - w) / 2;
-    int y = g_layout.height / 2 - 2;
+    int y = (g_layout.height - h) / 2;
     
     int percent = (total > 0) ? (int)(done * 100 / total) : 0;
-    int filled = (percent * (w - 6)) / 100;
-    if (filled > w - 6) filled = w - 6;
+    int bar_w = w - 6;
+    int filled = (percent * bar_w) / 100;
+    
+    attron(COLOR_PAIR(COLOR_STATUS));
+    // Draw dialog background
+    for (int i = 0; i < h; i++) {
+        mvhline(y + i, x, ' ', w);
+    }
+    
+    // Draw dialog border
+    attron(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
+    mvaddstr(y, x, "┏");
+    mvwhline(stdscr, y, x + 1, 0x2501, w - 2);
+    mvaddstr(y, x + w - 1, "┓");
+    mvvline(y + 1, x, 0x2503, h - 2);
+    mvvline(y + 1, x + w - 1, 0x2503, h - 2);
+    mvaddstr(y + h - 1, x, "┗");
+    mvwhline(stdscr, y + h - 1, x + 1, 0x2501, w - 2);
+    mvaddstr(y + h - 1, x + w - 1, "┛");
+    attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
     
     attron(COLOR_PAIR(COLOR_STATUS) | A_BOLD);
-    mvwhline(stdscr, y, x, ' ', w);
-    mvwhline(stdscr, y + h - 1, x, ' ', w);
-    for (int i = 1; i < h - 1; i++) {
-        mvwaddch(stdscr, y + i, x, ' ');
-        mvwaddch(stdscr, y + i, x + w - 1, ' ');
-    }
-    mvwaddch(stdscr, y, x, 0x256D);
-    mvwaddch(stdscr, y, x + w - 1, 0x256E);
-    mvwaddch(stdscr, y + h - 1, x, 0x2570);
-    mvwaddch(stdscr, y + h - 1, x + w - 1, 0x256F);
-    mvwaddch(stdscr, y, x + w - 1, 0x256E);
-    mvwaddch(stdscr, y + h - 1, x, 0x2570);
-    whline(stdscr, 0x2500, w - 2);
-    mvwaddch(stdscr, y, x + w - 1, ACS_URCORNER);
-    
-    mvwprintw(stdscr, y, x + 2, "%s", title);
-    
-    char bar[256];
-    memset(bar, '=', filled);
-    memset(bar + filled, '-', w - 6 - filled);
-    bar[w - 6] = '\0';
-    mvwprintw(stdscr, y + 2, x + 2, "[%s] %3d%%", bar, percent);
+    mvprintw(y, x + 2, " %s ", title);
+    attroff(A_BOLD);
     
     char fn[MAX_PATH];
     snprintf(fn, sizeof(fn), "%.*s", w - 10, filename);
-    mvwprintw(stdscr, y + 3, x + 2, "%s", fn);
+    mvprintw(y + 2, x + 3, "%s", fn);
     
-    attroff(COLOR_PAIR(COLOR_STATUS) | A_BOLD);
+    // Draw progress bar
+    mvprintw(y + 4, x + 3, "[");
+    attron(COLOR_PAIR(20));
+    for (int i = 0; i < bar_w; i++) {
+        if (i < filled) {
+            mvaddstr(y + 4, x + 4 + i, "█");
+        } else {
+            mvaddstr(y + 4, x + 4 + i, "░");
+        }
+    }
+    attroff(COLOR_PAIR(20));
+    mvprintw(y + 4, x + 4 + bar_w, "] %3d%%", percent);
+    
+    attroff(COLOR_PAIR(COLOR_STATUS));
     wrefresh(stdscr);
     
     nodelay(stdscr, TRUE);
@@ -179,11 +196,10 @@ void ui_draw(void) {
     ui_draw_panel(&g_state.panels[PANEL_LEFT], x, 0, l.panel_width, l.height - l.preview_height - 2, g_state.active == PANEL_LEFT);
     ui_draw_panel(&g_state.panels[PANEL_RIGHT], x + l.panel_width + 1, 0, l.panel_width, l.height - l.preview_height - 2, g_state.active == PANEL_RIGHT);
     
-    ui_draw_preview(&g_state.panels[g_state.active], x, l.height - l.preview_height - 1, l.panel_width, l.preview_height);
-    ui_draw_preview(&g_state.panels[1 - g_state.active], x + l.panel_width + 1, l.height - l.preview_height - 1, l.panel_width, l.preview_height);
+    ui_draw_preview(&g_state.panels[PANEL_LEFT], x, l.height - l.preview_height - 1, l.panel_width, l.preview_height);
+    ui_draw_preview(&g_state.panels[PANEL_RIGHT], x + l.panel_width + 1, l.height - l.preview_height - 1, l.panel_width, l.preview_height);
     
     Panel *active = &g_state.panels[g_state.active];
-    char left_status[256];
     int sel_count = panel_get_selected_count(active);
     uint64_t total_size = panel_get_total_size(active);
     uint64_t selected_size = panel_get_selected_size(active);
@@ -199,51 +215,84 @@ void ui_draw(void) {
     
     if (selected_size > 0) {
         if (selected_size < 1024 * 1024) {
-            snprintf(sel_str, sizeof(sel_str), "│ %d selected (%luK)", sel_count, (unsigned long)(selected_size / 1024));
+            snprintf(sel_str, sizeof(sel_str), " [%d sel, %luK]", sel_count, (unsigned long)(selected_size / 1024));
         } else if (selected_size < 1024ULL * 1024 * 1024) {
-            snprintf(sel_str, sizeof(sel_str), "│ %d selected (%.1fM)", sel_count, (double)selected_size / (1024 * 1024));
+            snprintf(sel_str, sizeof(sel_str), " [%d sel, %.1fM]", sel_count, (double)selected_size / (1024 * 1024));
         } else {
-            snprintf(sel_str, sizeof(sel_str), "│ %d selected (%.1fG)", sel_count, (double)selected_size / (1024ULL * 1024 * 1024));
+            snprintf(sel_str, sizeof(sel_str), " [%d sel, %.1fG]", sel_count, (double)selected_size / (1024ULL * 1024 * 1024));
         }
     } else {
         sel_str[0] = '\0';
     }
     
-    snprintf(left_status, sizeof(left_status), "%d items %s%s │ %s%s",
-             active->count, size_str, sel_str,
-             panel_get_sort_name(active), active->sort_reverse ? " ↓" : " ↑");
+    char left_info[256];
+    snprintf(left_info, sizeof(left_info), " %d items, %s%s ", active->count, size_str, sel_str);
+    
+    char sort_info[64];
+    snprintf(sort_info, sizeof(sort_info), " %s%s ", panel_get_sort_name(active), active->sort_reverse ? " ↓" : " ↑");
     
     time_t now = time(NULL);
     struct tm *tm = localtime(&now);
     char time_str[16];
-    strftime(time_str, sizeof(time_str), "%H:%M", tm);
+    strftime(time_str, sizeof(time_str), " %H:%M ", tm);
     
+    // Draw status bar background
     attron(COLOR_PAIR(COLOR_STATUS));
     mvhline(l.height - 1, 0, ' ', l.width);
-    mvprintw(l.height - 1, 0, " %s", left_status);
-    mvprintw(l.height - 1, l.width - 6, " %s ", time_str);
+    attroff(COLOR_PAIR(COLOR_STATUS));
     
-    const char *keys = "F1Help F3View F5Copy F6Move F7MkDir F8Del F9Quit";
-    mvprintw(l.height - 1, l.width - strlen(keys) - 7, "%s ", keys);
+    int curr_x = 0;
     
+    // Mode Segment
+    attron(COLOR_PAIR(20) | A_BOLD);
+    const char *mode_name = " NORMAL ";
+    if (g_state.mode == MODE_SEARCH) mode_name = " SEARCH ";
+    else if (g_state.mode == MODE_INPUT) mode_name = " INPUT  ";
+    mvprintw(l.height - 1, curr_x, "%s", mode_name);
+    curr_x += strlen(mode_name);
+    attroff(COLOR_PAIR(20) | A_BOLD);
+    
+    // Info Segment
+    attron(COLOR_PAIR(21));
+    mvprintw(l.height - 1, curr_x, "%s", left_info);
+    curr_x += strlen(left_info);
+    attroff(COLOR_PAIR(21));
+    
+    // Sort Segment
+    attron(COLOR_PAIR(COLOR_STATUS));
+    mvprintw(l.height - 1, curr_x, "%s", sort_info);
+    curr_x += strlen(sort_info);
+    attroff(COLOR_PAIR(COLOR_STATUS));
+    
+    // Status Message or Hints
     if (g_state.status_msg[0]) {
-        int msg_x = (l.width - strlen(g_state.status_msg)) / 2;
-        mvprintw(l.height - 1, msg_x, " %s ", g_state.status_msg);
+        attron(COLOR_PAIR(22) | A_BOLD);
+        int msg_len = strlen(g_state.status_msg) + 4;
+        int msg_x = (l.width - msg_len) / 2;
+        if (msg_x < curr_x) msg_x = curr_x + 2;
+        mvprintw(l.height - 1, msg_x, "  %s  ", g_state.status_msg);
+        attroff(COLOR_PAIR(22) | A_BOLD);
     } else {
         DirEntry *e = &active->entries[active->cursor];
         char hint[128] = "";
-        if (e->type == ENTRY_DIR) snprintf(hint, sizeof(hint), "Enter: open  Back: parent");
-        else if (e->type == ENTRY_PARENT) snprintf(hint, sizeof(hint), "Back: go up");
-        else snprintf(hint, sizeof(hint), "F3: preview  F5: copy  F6: move");
+        if (active->count > 0) {
+            if (e->type == ENTRY_DIR) snprintf(hint, sizeof(hint), "Enter:open  Bksp:up");
+            else if (e->type == ENTRY_PARENT) snprintf(hint, sizeof(hint), "Bksp:go up");
+            else snprintf(hint, sizeof(hint), "F3:view  F5:copy  F6:move");
+        }
         
-        int hint_x = l.width - strlen(keys) - strlen(hint) - 10;
-        if (hint_x > 40) {
-            attron(A_DIM);
-            mvprintw(l.height - 1, hint_x, " %s ", hint);
-            attroff(A_DIM);
+        int hint_x = l.width - strlen(time_str) - strlen(hint) - 2;
+        if (hint_x > curr_x + 5) {
+            attron(COLOR_PAIR(COLOR_STATUS) | A_DIM);
+            mvprintw(l.height - 1, hint_x, "%s", hint);
+            attroff(COLOR_PAIR(COLOR_STATUS) | A_DIM);
         }
     }
-    attroff(COLOR_PAIR(COLOR_STATUS));
+    
+    // Time Segment
+    attron(COLOR_PAIR(20) | A_BOLD);
+    mvprintw(l.height - 1, l.width - strlen(time_str), "%s", time_str);
+    attroff(COLOR_PAIR(20) | A_BOLD);
     
     refresh();
 }
@@ -343,36 +392,39 @@ static char* shorten_path(const char *path) {
 }
 
 void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
-    attron(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
-    mvhline(y, x, 0x2500, w);
-    mvhline(y + h - 1, x, 0x2500, w);
-    mvvline(y, x, 0x2502, h);
-    mvvline(y, x + w - 1, 0x2502, h);
-    mvaddch(y, x, 0x256D);
-    mvaddch(y, x + w - 1, 0x256E);
-    mvaddch(y + h - 1, x, 0x2570);
-    mvaddch(y + h - 1, x + w - 1, 0x256F);
-    attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
-
+    attron(COLOR_PAIR(COLOR_BORDER));
     if (active) {
-        attron(A_BOLD | COLOR_PAIR(COLOR_BORDER));
-    } else {
-        attron(COLOR_PAIR(COLOR_BORDER));
+        attron(A_BOLD);
     }
+    
+    // Draw box with UTF-8 border characters
+    mvaddstr(y, x, active ? "┏" : "┌");
+    mvwhline(stdscr, y, x + 1, active ? 0x2501 : 0x2500, w - 2);
+    mvaddstr(y, x + w - 1, active ? "┓" : "┐");
+    
+    mvvline(y + 1, x, active ? 0x2503 : 0x2502, h - 2);
+    mvvline(y + 1, x + w - 1, active ? 0x2503 : 0x2502, h - 2);
+    
+    mvaddstr(y + h - 1, x, active ? "┗" : "└");
+    mvwhline(stdscr, y + h - 1, x + 1, active ? 0x2501 : 0x2500, w - 2);
+    mvaddstr(y + h - 1, x + w - 1, active ? "┛" : "┘");
+    
     char title[MAX_PATH];
-    snprintf(title, sizeof(title), " %.38s ", shorten_path(p->path));
-    mvprintw(y, x + (w - (int)strlen(title)) / 2, "%s", title);
-    if (active) {
-        attroff(A_BOLD | COLOR_PAIR(COLOR_BORDER));
-    } else {
-        attroff(COLOR_PAIR(COLOR_BORDER));
+    snprintf(title, sizeof(title), " %s ", shorten_path(p->path));
+    int title_len = strlen(title);
+    if (title_len > w - 4) {
+        title[w - 4] = '\0';
+        title_len = w - 4;
     }
+    mvprintw(y, x + (w - title_len) / 2, "%s", title);
+    
+    attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
 
     int date_w = 12;
     int size_w = 6;
     int icon_w = 4;
-    int marker_w = 2;
-    int name_w = w - date_w - size_w - icon_w - marker_w - 6;
+    int marker_w = 1;
+    int name_w = w - date_w - size_w - icon_w - marker_w - 5;
     if (name_w < 10) name_w = 10;
 
     for (int i = 0; i < h - 2 && i + p->scroll_offset < p->count; i++) {
@@ -381,20 +433,16 @@ void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
         bool is_cursor = (idx == p->cursor);
         int file_color = get_file_color(e->name, e->type);
 
-        mvhline(y + 1 + i, x + 1, ' ', w - 2);
-
         if (active && is_cursor) {
-            attron(COLOR_PAIR(COLOR_SELECTED) | A_BOLD);
+            attron(COLOR_PAIR(COLOR_SELECTED));
+            // Fill background for the entire line
+            mvhline(y + 1 + i, x + 1, ' ', w - 2);
         } else {
-            if (e->type == ENTRY_PARENT) {
-                attron(COLOR_PAIR(COLOR_PARENT) | A_BOLD);
-            } else if (e->type == ENTRY_DIR) {
-                attron(COLOR_PAIR(COLOR_DIR) | A_BOLD);
-            } else if (e->type == ENTRY_SYMLINK) {
-                attron(COLOR_PAIR(COLOR_SYMLINK));
-            } else {
-                attron(COLOR_PAIR(file_color));
+            attron(COLOR_PAIR(file_color));
+            if (e->type == ENTRY_DIR || e->type == ENTRY_PARENT) {
+                attron(A_BOLD);
             }
+            mvhline(y + 1 + i, x + 1, ' ', w - 2);
         }
 
         char datebuf[16];
@@ -402,14 +450,9 @@ void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
         const char *icon;
 
         format_date(e->mtime, datebuf, sizeof(datebuf));
-
         icon = get_file_icon(e->name, e->type);
 
-        if (e->type == ENTRY_PARENT) {
-            strcpy(sizebuf, "     ");
-        } else if (e->type == ENTRY_DIR) {
-            strcpy(sizebuf, "     ");
-        } else if (e->type == ENTRY_SYMLINK) {
+        if (e->type == ENTRY_PARENT || e->type == ENTRY_DIR) {
             strcpy(sizebuf, "     ");
         } else {
             if (e->size < 1024) {
@@ -423,26 +466,23 @@ void ui_draw_panel(Panel *p, int x, int y, int w, int h, bool active) {
             }
         }
 
-        mvprintw(y + 1 + i, x + 1, "%c%c%s %-*.*s %s %s",
-                 is_cursor ? '>' : ' ',
-                 e->selected ? '*' : ' ',
+        // Selected marker (*)
+        if (e->selected) {
+            attron(A_BOLD);
+            mvaddstr(y + 1 + i, x + 1, "*");
+            attroff(A_BOLD);
+        }
+
+        mvprintw(y + 1 + i, x + 3, "%s  %-*.*s %s %s",
                  icon,
                  name_w, name_w, e->name,
                  sizebuf,
                  datebuf);
 
         if (active && is_cursor) {
-            attroff(COLOR_PAIR(COLOR_SELECTED) | A_BOLD);
+            attroff(COLOR_PAIR(COLOR_SELECTED));
         } else {
-            if (e->type == ENTRY_PARENT) {
-                attroff(COLOR_PAIR(COLOR_PARENT) | A_BOLD);
-            } else if (e->type == ENTRY_DIR) {
-                attroff(COLOR_PAIR(COLOR_DIR) | A_BOLD);
-            } else if (e->type == ENTRY_SYMLINK) {
-                attroff(COLOR_PAIR(COLOR_SYMLINK));
-            } else {
-                attroff(COLOR_PAIR(file_color));
-            }
+            attroff(COLOR_PAIR(file_color) | A_BOLD);
         }
     }
 }
@@ -525,20 +565,36 @@ void ui_draw_help(void) {
 }
 
 void ui_message(const char *title, const char *msg) {
-    int w = strlen(title) + strlen(msg) + 8;
+    int msg_len = strlen(msg);
+    int w = (msg_len > (int)strlen(title) ? msg_len : (int)strlen(title)) + 10;
     if (w < 40) w = 40;
-    int h = 5;
+    if (w > g_layout.width - 4) w = g_layout.width - 4;
+    int h = 7;
     int x = (g_layout.width - w) / 2;
     int y = (g_layout.height - h) / 2;
     
     attron(COLOR_PAIR(COLOR_STATUS));
-    mvhline(y, x, ' ', w);
-    mvprintw(y, x + (w - strlen(title)) / 2, "%s", title);
-    mvhline(y + 1, x + 1, ' ', w - 2);
-    mvprintw(y + 2, x + (w - strlen(msg)) / 2, "%s", msg);
-    mvhline(y + 3, x + 1, ' ', w - 2);
-    mvhline(y + 4, x, ' ', w);
-    attroff(COLOR_PAIR(COLOR_STATUS));
+    for (int i = 0; i < h; i++) mvhline(y + i, x, ' ', w);
+    
+    attron(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
+    mvaddstr(y, x, "┏");
+    mvwhline(stdscr, y, x + 1, 0x2501, w - 2);
+    mvaddstr(y, x + w - 1, "┓");
+    mvvline(y + 1, x, 0x2503, h - 2);
+    mvvline(y + 1, x + w - 1, 0x2503, h - 2);
+    mvaddstr(y + h - 1, x, "┗");
+    mvwhline(stdscr, y + h - 1, x + 1, 0x2501, w - 2);
+    mvaddstr(y + h - 1, x + w - 1, "┛");
+    
+    mvprintw(y, x + 2, " %s ", title);
+    attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
+    
+    attron(COLOR_PAIR(COLOR_STATUS));
+    mvprintw(y + 2, x + (w - msg_len) / 2, "%s", msg);
+    attron(A_DIM);
+    mvprintw(y + 4, x + (w - 20) / 2, "Press any key...");
+    attroff(A_DIM | COLOR_PAIR(COLOR_STATUS));
+    
     refresh();
     nodelay(stdscr, FALSE);
     getch();
@@ -546,17 +602,28 @@ void ui_message(const char *title, const char *msg) {
 }
 
 char *ui_input(const char *prompt, const char *initial) {
-    int w = g_layout.width - 10;
-    int h = 3;
-    int x = 5;
-    int y = g_layout.height / 2;
+    int w = g_layout.width - 20;
+    if (w < 40) w = 40;
+    if (w > 80) w = 80;
+    int h = 5;
+    int x = (g_layout.width - w) / 2;
+    int y = (g_layout.height - h) / 2;
     
     attron(COLOR_PAIR(COLOR_STATUS));
-    mvhline(y, x, ' ', w);
-    mvprintw(y, x, "%s", prompt);
-    mvhline(y + 1, x, ' ', w);
-    mvhline(y + 2, x, ' ', w);
-    attroff(COLOR_PAIR(COLOR_STATUS));
+    for (int i = 0; i < h; i++) mvhline(y + i, x, ' ', w);
+    
+    attron(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
+    mvaddstr(y, x, "┏");
+    mvwhline(stdscr, y, x + 1, 0x2501, w - 2);
+    mvaddstr(y, x + w - 1, "┓");
+    mvvline(y + 1, x, 0x2503, h - 2);
+    mvvline(y + 1, x + w - 1, 0x2503, h - 2);
+    mvaddstr(y + h - 1, x, "┗");
+    mvwhline(stdscr, y + h - 1, x + 1, 0x2501, w - 2);
+    mvaddstr(y + h - 1, x + w - 1, "┛");
+    
+    mvprintw(y, x + 2, " %s ", prompt);
+    attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
     
     echo();
     curs_set(1);
@@ -565,54 +632,76 @@ char *ui_input(const char *prompt, const char *initial) {
     if (initial) strncpy(buf, initial, MAX_PATH - 1);
     else buf[0] = '\0';
     
-    mvprintw(y + 1, x + 1, "%s", buf);
+    attron(COLOR_PAIR(COLOR_STATUS));
+    mvprintw(y + 2, x + 2, "> %s", buf);
     int len = strlen(buf);
-    move(y + 1, x + 1 + len);
+    move(y + 2, x + 4 + len);
     
     int ch;
     while ((ch = getch()) != ERR) {
         if (ch == '\n' || ch == KEY_ENTER) {
             noecho();
             curs_set(0);
+            attroff(COLOR_PAIR(COLOR_STATUS));
             return xstrdup(buf);
         }
-        if (ch == 27 || ch == KEY_CANCEL) {
+        if (ch == 27) {
             noecho();
             curs_set(0);
+            attroff(COLOR_PAIR(COLOR_STATUS));
             return NULL;
         }
         if (ch == KEY_BACKSPACE || ch == 127) {
             if (len > 0) {
                 buf[--len] = '\0';
-                mvprintw(y + 1, x + 1, "%s ", buf);
-                move(y + 1, x + 1 + len);
+                mvhline(y + 2, x + 4, ' ', w - 6);
+                mvprintw(y + 2, x + 4, "%s", buf);
+                move(y + 2, x + 4 + len);
             }
         }
         else if (ch >= 32 && ch < 127 && len < MAX_PATH - 1) {
             buf[len++] = ch;
             buf[len] = '\0';
-            mvaddch(y + 1, x + len, ch);
-            move(y + 1, x + 1 + len);
+            mvaddch(y + 2, x + 3 + len, ch);
+            move(y + 2, x + 4 + len);
         }
     }
     
     noecho();
     curs_set(0);
+    attroff(COLOR_PAIR(COLOR_STATUS));
     return NULL;
 }
 
 int ui_confirm(const char *msg) {
-    int w = strlen(msg) + 20;
-    int h = 3;
+    int msg_len = strlen(msg);
+    int w = msg_len + 10;
+    if (w < 40) w = 40;
+    int h = 5;
     int x = (g_layout.width - w) / 2;
     int y = (g_layout.height - h) / 2;
     
     attron(COLOR_PAIR(COLOR_STATUS));
-    mvhline(y, x, ' ', w);
-    mvprintw(y, x + 2, "%s", msg);
-    mvhline(y + 1, x, ' ', w);
-    mvprintw(y + 2, x + (w - 12) / 2, "[Y]es [N]o");
-    attroff(COLOR_PAIR(COLOR_STATUS));
+    for (int i = 0; i < h; i++) mvhline(y + i, x, ' ', w);
+    
+    attron(COLOR_PAIR(23) | A_BOLD); // Error/Warning color for confirmation
+    mvaddstr(y, x, "┏");
+    mvwhline(stdscr, y, x + 1, 0x2501, w - 2);
+    mvaddstr(y, x + w - 1, "┓");
+    mvvline(y + 1, x, 0x2503, h - 2);
+    mvvline(y + 1, x + w - 1, 0x2503, h - 2);
+    mvaddstr(y + h - 1, x, "┗");
+    mvwhline(stdscr, y + h - 1, x + 1, 0x2501, w - 2);
+    mvaddstr(y + h - 1, x + w - 1, "┛");
+    
+    mvprintw(y, x + 2, " Confirm ");
+    attroff(COLOR_PAIR(23) | A_BOLD);
+    
+    attron(COLOR_PAIR(COLOR_STATUS));
+    mvprintw(y + 2, x + (w - msg_len) / 2, "%s", msg);
+    attron(A_BOLD);
+    mvprintw(y + 3, x + (w - 12) / 2, " [Y]es  [N]o ");
+    attroff(A_BOLD | COLOR_PAIR(COLOR_STATUS));
     refresh();
     
     int ch;

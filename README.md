@@ -5,7 +5,7 @@ A tiny, portable, text-mode dual-pane file manager written in C. Inspired by cla
 ## Features
 
 - **Dual independent panels** - Each panel maintains its own directory, allowing easy file management between two locations
-- **File operations**: Copy (F5), Move/Rename (F6), Delete (F8), Create directory (F7)
+- **File operations**: Copy (F5), Move/Rename (F6), Delete (F8), Create directory (F7) with batch operations on selected files
 - **File preview**: Text files show content with syntax highlighting by file type; binaries show hex dump
 - **Archive support**: Browse inside zip, tar, tar.gz, tar.bz2, tar.xz, 7z, and rar archives
 - **Quick search**: Press `/` to filter files by pattern in the current directory
@@ -14,6 +14,9 @@ A tiny, portable, text-mode dual-pane file manager written in C. Inspired by cla
 - **Hidden files**: Toggle visibility with `.`
 - **Shell access**: Spawn a shell in the current directory with `!` or `Ctrl+S`
 - **Clipboard**: Copy filename (`Ctrl+C`) or full path (`Ctrl+Y`) to clipboard
+- **Smart cursor**: Cursor position is preserved when navigating up/down directories, refreshing after file operations, and toggling hidden files
+- **Page navigation**: Page Up/Page Down/Home/End with proper scroll tracking
+- **Cross-filesystem moves**: Files are automatically copied and deleted when moving across filesystems
 
 ## Building
 
@@ -97,8 +100,10 @@ The bottom toolbar shows available function key actions.
 | Key | Action |
 |-----|--------|
 | `Up/Down/k/j` | Move cursor up/down |
+| `PgUp/PgDn` | Scroll up/down one page |
+| `Home/End` | Jump to first/last entry |
 | `Enter/l` | Enter directory or open file |
-| `Backspace/h` | Go to parent directory |
+| `Backspace/h` | Go to parent directory (restores cursor to previous directory) |
 | `Tab` | Switch between left and right panels |
 
 ### Sorting & View
@@ -114,10 +119,10 @@ The bottom toolbar shows available function key actions.
 
 | Key | Action |
 |-----|--------|
-| `F5` | Copy selected files to the other panel |
-| `F6` | Move/Rename selected file |
+| `F5` | Copy selected files (or current file) to the other panel; extracts archives |
+| `F6` | Move selected files to other panel, or rename current file |
 | `F7` | Create new directory |
-| `F8/Del` | Delete selected files |
+| `F8/Del` | Delete selected files (or current file) |
 
 ### Selection
 

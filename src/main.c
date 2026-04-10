@@ -84,17 +84,29 @@ static void handle_key(int key) {
             active->cursor = 0;
             active->scroll_offset = 0;
             break;
-        case KEY_END:
+        case KEY_END: {
+            UILayout l = ui_get_layout();
+            int vis = l.height - l.preview_height - 4;
             active->cursor = active->count - 1;
+            panel_ensure_visible(active, vis);
             break;
-        case KEY_PPAGE:
-            active->cursor -= 10;
+        }
+        case KEY_PPAGE: {
+            UILayout l = ui_get_layout();
+            int vis = l.height - l.preview_height - 4;
+            active->cursor -= vis;
             if (active->cursor < 0) active->cursor = 0;
+            panel_ensure_visible(active, vis);
             break;
-        case KEY_NPAGE:
-            active->cursor += 10;
+        }
+        case KEY_NPAGE: {
+            UILayout l = ui_get_layout();
+            int vis = l.height - l.preview_height - 4;
+            active->cursor += vis;
             if (active->cursor >= active->count) active->cursor = active->count - 1;
+            panel_ensure_visible(active, vis);
             break;
+        }
         case '*': case KEY_IC:
             if (active->count > 0) {
                 active->entries[active->cursor].selected = !active->entries[active->cursor].selected;
@@ -173,16 +185,33 @@ static void handle_key(int key) {
         case KEY_F(3):
             g_state.mode = (g_state.mode == MODE_PREVIEW_FULLSCREEN) ? MODE_NORMAL : MODE_PREVIEW_FULLSCREEN;
             break;
-        case KEY_F(5):
-            fileops_copy(active, other);
-            break;
-        case KEY_F(6): {
-            char *newname = ui_input("Move/Rename to:", active->entries[active->cursor].name);
-            if (newname) {
-                if (strcmp(newname, active->entries[active->cursor].name) != 0) {
-                    fileops_move(active, other);
+        case KEY_F(5): {
+            int selected = panel_get_selected_count(active);
+            if (selected > 0) {
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Copy %d selected items?", selected);
+                if (ui_confirm(msg)) {
+                    fileops_copy(active, other);
                 }
-                free(newname);
+            } else if (active->count > 0) {
+                fileops_copy(active, other);
+            }
+            break;
+        }
+        case KEY_F(6): {
+            int selected = panel_get_selected_count(active);
+            if (selected > 0) {
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Move %d selected items?", selected);
+                if (ui_confirm(msg)) {
+                    fileops_move(active, other, NULL);
+                }
+            } else if (active->count > 0) {
+                char *newname = ui_input("Move/Rename to:", active->entries[active->cursor].name);
+                if (newname) {
+                    fileops_move(active, other, newname);
+                    free(newname);
+                }
             }
             break;
         }

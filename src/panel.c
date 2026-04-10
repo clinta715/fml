@@ -75,6 +75,13 @@ void panel_free(Panel *p) {
 }
 
 int panel_refresh(Panel *p) {
+    char saved_name[MAX_NAME] = "";
+    int saved_cursor = p->cursor;
+    if (p->count > 0 && p->cursor >= 0 && p->cursor < p->count) {
+        strncpy(saved_name, p->entries[p->cursor].name, MAX_NAME - 1);
+        saved_name[MAX_NAME - 1] = '\0';
+    }
+    
     free(p->entries);
     p->entries = NULL;
     p->count = 0;
@@ -117,17 +124,47 @@ int panel_refresh(Panel *p) {
     p->count = out_idx;
     free(raw_entries);
     
-    // Sort the entries (parent is handled by comparator)
     if (p->count > 0) {
         g_sort_panel = p;
         qsort(p->entries, p->count, sizeof(DirEntry), entry_cmp);
         g_sort_panel = NULL;
     }
     
-    if (p->cursor >= p->count) p->cursor = p->count - 1;
+    if (saved_name[0]) {
+        int found = -1;
+        for (int i = 0; i < p->count; i++) {
+            if (strcmp(p->entries[i].name, saved_name) == 0) {
+                found = i;
+                break;
+            }
+        }
+        if (found >= 0) {
+            p->cursor = found;
+        } else {
+            p->cursor = saved_cursor;
+            if (p->cursor >= p->count) p->cursor = p->count - 1;
+        }
+    } else {
+        p->cursor = 0;
+    }
     if (p->cursor < 0) p->cursor = 0;
     
+    if (p->cursor < p->scroll_offset) {
+        p->scroll_offset = p->cursor;
+    }
+    
     return 0;
+}
+
+void panel_ensure_visible(Panel *p, int vis_lines) {
+    if (vis_lines <= 0) vis_lines = 1;
+    if (p->cursor < p->scroll_offset) {
+        p->scroll_offset = p->cursor;
+    }
+    if (p->cursor >= p->scroll_offset + vis_lines) {
+        p->scroll_offset = p->cursor - vis_lines + 1;
+        if (p->scroll_offset < 0) p->scroll_offset = 0;
+    }
 }
 
 int panel_cursor_up(Panel *p) {
@@ -177,8 +214,22 @@ int panel_parent(Panel *p) {
     char *parent = xstrdup(p->path);
     char *last = strrchr(parent, '/');
     if (last && last != parent) {
+        const char *child = last + 1;
+        char saved[MAX_NAME];
+        strncpy(saved, child, MAX_NAME - 1);
+        saved[MAX_NAME - 1] = '\0';
         *last = '\0';
         if (panel_goto(p, parent) == 0) {
+            for (int i = 0; i < p->count; i++) {
+                if (p->entries[i].type != ENTRY_PARENT &&
+                    strcmp(p->entries[i].name, saved) == 0) {
+                    p->cursor = i;
+                    if (p->cursor < p->scroll_offset) {
+                        p->scroll_offset = p->cursor;
+                    }
+                    break;
+                }
+            }
             free(parent);
             return 0;
         }
