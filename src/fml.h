@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <time.h>
 
-#define VERSION "0.1.0"
+#define VERSION "0.2.0"
 #define MAX_PATH 4096
 #define MAX_NAME 256
 #define MAX_ENTRIES 8192
@@ -39,7 +39,9 @@ typedef enum {
     MODE_NORMAL,
     MODE_SEARCH,
     MODE_INPUT,
-    MODE_PREVIEW_FULLSCREEN
+    MODE_PREVIEW_FULLSCREEN,
+    MODE_HEXEDIT,
+    MODE_TEXTEDIT
 } UIMode;
 
 typedef enum {

@@ -7,6 +7,8 @@ A tiny, portable, text-mode dual-pane file manager written in C. Inspired by cla
 - **Dual independent panels** - Each panel maintains its own directory, allowing easy file management between two locations
 - **File operations**: Copy (F5), Move/Rename (F6), Delete (F8), Create directory (F7) with batch operations on selected files
 - **File preview**: Text files show content with syntax highlighting by file type; binaries show hex dump
+- **Text editor**: Edit text files with syntax highlighting, undo/redo, search/replace, bookmarks, and more (F4)
+- **Hex editor**: Edit any file byte-by-byte in hex or ASCII mode (F4)
 - **Archive support**: Browse inside zip, tar, tar.gz, tar.bz2, tar.xz, 7z, and rar archives
 - **Quick search**: Press `/` to filter files by pattern in the current directory
 - **Advanced selection**: Toggle individual files with `Insert` or `*`, select/deselect by pattern with `+` and `\`
@@ -124,6 +126,44 @@ The bottom toolbar shows available function key actions.
 | `F7` | Create new directory |
 | `F8/Del` | Delete selected files (or current file) |
 
+### Text Editor (F4 on text files)
+
+| Key | Action |
+|-----|--------|
+| `Arrow keys` | Move cursor |
+| `Home/End` | Jump to line start/end |
+| `PgUp/PgDn` | Scroll up/down one page |
+| `Insert` | Toggle insert/overwrite mode |
+| `F2` / `Ctrl+S` | Save file |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / Redo |
+| `Ctrl+A` | Select all |
+| `Ctrl+C/X/V` | Copy / Cut / Paste |
+| `/` | Find text |
+| `n` / `N` | Next / Previous match |
+| `Ctrl+H` | Find and replace |
+| `Ctrl+G` | Go to line |
+| `Ctrl+K` | Delete line |
+| `Ctrl+D` | Duplicate line |
+| `Ctrl+B` | Toggle bookmark |
+| `Ctrl+N` / `Ctrl+P` | Next / Previous bookmark |
+| `Tab` / `Shift+Tab` | Indent / Dedent |
+| `Ctrl+W` | Toggle word wrap |
+| `Esc` | Exit editor |
+
+### Hex Editor (F4 on binary files)
+
+| Key | Action |
+|-----|--------|
+| `F4` | Open current file in editor |
+| `Arrow keys` | Navigate bytes |
+| `Tab` | Toggle between hex and ASCII editing |
+| `Insert` | Toggle insert/overwrite mode |
+| `0-9/a-f` | Enter hex byte values |
+| `g` | Go to offset (hex) |
+| `/` | Find hex pattern |
+| `F2` | Save changes |
+| `Esc` | Quit hex editor |
+
 ### Selection
 
 | Key | Action |
@@ -151,7 +191,7 @@ The bottom toolbar shows available function key actions.
 
 ## Keyboard Shortcuts Summary
 
-The bottom toolbar displays: `F1Help F3View F5Copy F6Move F7MkDir F8Del F9Quit`
+The bottom toolbar displays: `F1Help F3View F4Edit F5Copy F6Move F7MkDir F8Del F9Quit`
 
 ## Configuration
 

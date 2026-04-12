@@ -6,9 +6,13 @@
 #include "platform.h"
 #include "shell.h"
 #include "clipboard.h"
+#include "hexedit.h"
+#include "textedit.h"
 #include <locale.h>
 
 AppState g_state;
+static HexEditor g_hexedit;
+static TextEditor g_textedit;
 
 void die(const char *msg) {
     ui_cleanup();
@@ -41,7 +45,49 @@ static void init_state(void) {
     g_state.active = PANEL_LEFT;
 }
 
+static void handle_hexedit_key(int key) {
+    if (key == 27 || key == KEY_F(10) || key == KEY_F(9)) {
+        if (g_hexedit.modified) {
+            if (ui_confirm("File modified. Discard changes?")) {
+                hexedit_close(&g_hexedit);
+                g_state.mode = MODE_NORMAL;
+            }
+        } else {
+            hexedit_close(&g_hexedit);
+            g_state.mode = MODE_NORMAL;
+        }
+        return;
+    }
+    hexedit_handle_key(&g_hexedit, key);
+}
+
+static void handle_textedit_key(int key) {
+    if (key == 27 || key == KEY_F(10) || key == KEY_F(9)) {
+        if (g_textedit.modified) {
+            if (ui_confirm("File modified. Discard changes?")) {
+                textedit_close(&g_textedit);
+                g_state.mode = MODE_NORMAL;
+            }
+        } else {
+            textedit_close(&g_textedit);
+            g_state.mode = MODE_NORMAL;
+        }
+        return;
+    }
+    textedit_handle_key(&g_textedit, key);
+}
+
 static void handle_key(int key) {
+    if (g_state.mode == MODE_HEXEDIT) {
+        handle_hexedit_key(key);
+        return;
+    }
+    
+    if (g_state.mode == MODE_TEXTEDIT) {
+        handle_textedit_key(key);
+        return;
+    }
+    
     if (g_state.mode == MODE_SEARCH) {
         if (key == 27 || key == KEY_CANCEL) {
             search_cancel(&g_state.panels[g_state.active]);
@@ -185,6 +231,29 @@ static void handle_key(int key) {
         case KEY_F(3):
             g_state.mode = (g_state.mode == MODE_PREVIEW_FULLSCREEN) ? MODE_NORMAL : MODE_PREVIEW_FULLSCREEN;
             break;
+        case KEY_F(4): {
+            if (active->count > 0) {
+                DirEntry *e = &active->entries[active->cursor];
+                if (e->type == ENTRY_FILE) {
+                    char *fpath = pl_path_join(active->path, e->name);
+                    if (pl_is_text_file(fpath)) {
+                        if (textedit_open(&g_textedit, fpath) == 0) {
+                            g_state.mode = MODE_TEXTEDIT;
+                        } else {
+                            ui_draw_status("Cannot open file for editing");
+                        }
+                    } else {
+                        if (hexedit_open(&g_hexedit, fpath) == 0) {
+                            g_state.mode = MODE_HEXEDIT;
+                        } else {
+                            ui_draw_status("Cannot open file for hex editing");
+                        }
+                    }
+                    free(fpath);
+                }
+            }
+            break;
+        }
         case KEY_F(5): {
             int selected = panel_get_selected_count(active);
             if (selected > 0) {
@@ -251,7 +320,19 @@ int main(int argc, char **argv) {
     panel_init(&g_state.panels[PANEL_RIGHT], cwd);
     
     while (g_state.running) {
-        ui_draw();
+        if (g_state.mode == MODE_HEXEDIT) {
+            UILayout l = ui_get_layout();
+            erase();
+            hexedit_draw(&g_hexedit, stdscr, l.width, l.height);
+            refresh();
+        } else if (g_state.mode == MODE_TEXTEDIT) {
+            UILayout l = ui_get_layout();
+            erase();
+            textedit_draw(&g_textedit, stdscr, l.width, l.height);
+            refresh();
+        } else {
+            ui_draw();
+        }
         int key = ui_get_key();
         if (key != -1) {
             handle_key(key);

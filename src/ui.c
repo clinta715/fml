@@ -45,6 +45,15 @@ static void init_colors(void) {
     init_pair(21, 15, 4);                  // White on blue (info/path)
     init_pair(22, 15, 2);                  // White on green (success/confirm)
     init_pair(23, 15, 1);                  // White on red (error/warning)
+    
+    // Syntax highlighting colors
+    init_pair(30, 3, -1);                  // Keywords (yellow)
+    init_pair(31, 2, -1);                  // Strings (green)
+    init_pair(32, 8, -1);                  // Comments (dim gray)
+    init_pair(33, 5, -1);                  // Numbers (magenta)
+    init_pair(34, 6, -1);                  // Types (cyan)
+    init_pair(35, 0, 11);                  // Search match highlight (black on yellow)
+    init_pair(36, 5, -1);                  // Preprocessor/special (magenta)
 }
 
 static void format_date(time_t t, char *buf, size_t len) {
@@ -248,6 +257,8 @@ void ui_draw(void) {
     const char *mode_name = " NORMAL ";
     if (g_state.mode == MODE_SEARCH) mode_name = " SEARCH ";
     else if (g_state.mode == MODE_INPUT) mode_name = " INPUT  ";
+    else if (g_state.mode == MODE_HEXEDIT) mode_name = " HEXEDIT";
+    else if (g_state.mode == MODE_TEXTEDIT) mode_name = " TEXTEDI";
     mvprintw(l.height - 1, curr_x, "%s", mode_name);
     curr_x += strlen(mode_name);
     attroff(COLOR_PAIR(20) | A_BOLD);
@@ -535,6 +546,28 @@ void ui_draw_help(void) {
     mvprintw(y++, 6, "S             Reverse sort order");
     mvprintw(y++, 6, ".             Toggle hidden files");
     mvprintw(y++, 6, "F3            Toggle full-screen preview");
+    mvprintw(y++, 6, "F4            Edit file (text or hex)");
+    y++;
+    mvprintw(y++, 4, "Text Editor (F4 on text files):");
+    mvprintw(y++, 6, "Arrows        Move cursor");
+    mvprintw(y++, 6, "Home/End      Line start/end");
+    mvprintw(y++, 6, "PgUp/PgDn     Page scroll");
+    mvprintw(y++, 6, "Insert        Toggle insert/overwrite");
+    mvprintw(y++, 6, "F2 / Ctrl+S   Save file");
+    mvprintw(y++, 6, "Ctrl+Z / Y    Undo / Redo");
+    mvprintw(y++, 6, "Ctrl+A        Select all");
+    mvprintw(y++, 6, "Ctrl+C/X/V    Copy / Cut / Paste");
+    mvprintw(y++, 6, "/             Find text");
+    mvprintw(y++, 6, "n / N         Next / Previous match");
+    mvprintw(y++, 6, "Ctrl+H        Find and replace");
+    mvprintw(y++, 6, "Ctrl+G        Go to line");
+    mvprintw(y++, 6, "Ctrl+K        Delete line");
+    mvprintw(y++, 6, "Ctrl+D        Duplicate line");
+    mvprintw(y++, 6, "Ctrl+B        Toggle bookmark");
+    mvprintw(y++, 6, "Ctrl+N / P    Next / Previous bookmark");
+    mvprintw(y++, 6, "Tab / S-Tab   Indent / Dedent");
+    mvprintw(y++, 6, "Ctrl+W        Toggle word wrap");
+    mvprintw(y++, 6, "Esc           Exit editor");
     y++;
     mvprintw(y++, 4, "File Operations:");
     mvprintw(y++, 6, "F5            Copy/Extract archive to other panel");
