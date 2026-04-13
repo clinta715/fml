@@ -1,7 +1,7 @@
 #ifndef UI_H
 #define UI_H
 
-#include <ncurses.h>
+#include "compat.h"
 #include "fml.h"
 
 #define UI_MIN_WIDTH 80

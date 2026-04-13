@@ -207,21 +207,21 @@ static SyntaxLang detect_syntax(const char *path) {
     if (!ext) return SYNTAX_NONE;
     ext++;
 
-    if (strcasecmp(ext, "c") == 0 || strcasecmp(ext, "h") == 0) return SYNTAX_C;
-    if (strcasecmp(ext, "py") == 0 || strcasecmp(ext, "pyw") == 0) return SYNTAX_PYTHON;
-    if (strcasecmp(ext, "sh") == 0 || strcasecmp(ext, "bash") == 0 ||
-        strcasecmp(ext, "zsh") == 0) return SYNTAX_SHELL;
-    if (strcasecmp(ext, "js") == 0 || strcasecmp(ext, "jsx") == 0 ||
-        strcasecmp(ext, "ts") == 0 || strcasecmp(ext, "tsx") == 0 ||
-        strcasecmp(ext, "mjs") == 0) return SYNTAX_JAVASCRIPT;
-    if (strcasecmp(ext, "json") == 0) return SYNTAX_JSON;
-    if (strcasecmp(ext, "xml") == 0 || strcasecmp(ext, "html") == 0 ||
-        strcasecmp(ext, "htm") == 0 || strcasecmp(ext, "svg") == 0) return SYNTAX_XML;
-    if (strcasecmp(ext, "md") == 0 || strcasecmp(ext, "markdown") == 0) return SYNTAX_MARKDOWN;
-    if (strcasecmp(ext, "rs") == 0) return SYNTAX_RUST;
-    if (strcasecmp(ext, "go") == 0) return SYNTAX_GO;
-    if (strcasecmp(ext, "css") == 0 || strcasecmp(ext, "scss") == 0 ||
-        strcasecmp(ext, "less") == 0) return SYNTAX_CSS;
+    if (FML_STRCASECMP(ext, "c") == 0 || FML_STRCASECMP(ext, "h") == 0) return SYNTAX_C;
+    if (FML_STRCASECMP(ext, "py") == 0 || FML_STRCASECMP(ext, "pyw") == 0) return SYNTAX_PYTHON;
+    if (FML_STRCASECMP(ext, "sh") == 0 || FML_STRCASECMP(ext, "bash") == 0 ||
+        FML_STRCASECMP(ext, "zsh") == 0) return SYNTAX_SHELL;
+    if (FML_STRCASECMP(ext, "js") == 0 || FML_STRCASECMP(ext, "jsx") == 0 ||
+        FML_STRCASECMP(ext, "ts") == 0 || FML_STRCASECMP(ext, "tsx") == 0 ||
+        FML_STRCASECMP(ext, "mjs") == 0) return SYNTAX_JAVASCRIPT;
+    if (FML_STRCASECMP(ext, "json") == 0) return SYNTAX_JSON;
+    if (FML_STRCASECMP(ext, "xml") == 0 || FML_STRCASECMP(ext, "html") == 0 ||
+        FML_STRCASECMP(ext, "htm") == 0 || FML_STRCASECMP(ext, "svg") == 0) return SYNTAX_XML;
+    if (FML_STRCASECMP(ext, "md") == 0 || FML_STRCASECMP(ext, "markdown") == 0) return SYNTAX_MARKDOWN;
+    if (FML_STRCASECMP(ext, "rs") == 0) return SYNTAX_RUST;
+    if (FML_STRCASECMP(ext, "go") == 0) return SYNTAX_GO;
+    if (FML_STRCASECMP(ext, "css") == 0 || FML_STRCASECMP(ext, "scss") == 0 ||
+        FML_STRCASECMP(ext, "less") == 0) return SYNTAX_CSS;
     return SYNTAX_NONE;
 }
 
@@ -936,8 +936,7 @@ void textedit_draw(TextEditor *ed, WINDOW *win, int w, int h) {
     mvaddstr(0, w - 1, "\u2513");
     attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
 
-    const char *basename = strrchr(ed->path, '/');
-    basename = basename ? basename + 1 : ed->path;
+    const char *basename = fml_basename(ed->path);
     char title[256];
     snprintf(title, sizeof(title), " Text Editor: %s%s ", basename, ed->modified ? " [MODIFIED]" : "");
     attron(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
@@ -953,7 +952,7 @@ void textedit_draw(TextEditor *ed, WINDOW *win, int w, int h) {
     int max_spans = 128;
     HlSpan *spans = NULL;
     if (ed->syntax != SYNTAX_NONE) {
-        spans = alloca(sizeof(HlSpan) * max_spans);
+        spans = FML_ALLOCA(sizeof(HlSpan) * max_spans);
     }
 
     for (int row = 0; row < data_rows; row++) {

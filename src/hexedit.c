@@ -146,8 +146,7 @@ void hexedit_draw(HexEditor *ed, WINDOW *win, int w, int h) {
     mvaddstr(0, w - 1, "\u2513");
     attroff(COLOR_PAIR(COLOR_BORDER) | A_BOLD);
 
-    const char *basename = strrchr(ed->path, '/');
-    basename = basename ? basename + 1 : ed->path;
+    const char *basename = fml_basename(ed->path);
     char title[256];
     snprintf(title, sizeof(title), " Hex Editor: %s%s ", basename, ed->modified ? " [MODIFIED]" : "");
     attron(COLOR_PAIR(COLOR_BORDER) | A_BOLD);

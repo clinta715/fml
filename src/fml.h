@@ -8,8 +8,14 @@
 #include <stdint.h>
 #include <time.h>
 
-#define VERSION "0.2.0"
-#define MAX_PATH 4096
+#define VERSION "0.3.0"
+#ifndef FML_MAX_PATH
+#define FML_MAX_PATH 4096
+#endif
+#ifdef MAX_PATH
+#undef MAX_PATH
+#endif
+#define MAX_PATH FML_MAX_PATH
 #define MAX_NAME 256
 #define MAX_ENTRIES 8192
 #define MAX_SEARCH 256

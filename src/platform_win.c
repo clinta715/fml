@@ -72,6 +72,9 @@ int pl_list_dir(const char *path, PlatformDirEntry **entries, int *count) {
         strncpy(e->name, fd.cFileName, MAX_NAME - 1);
         e->name[MAX_NAME - 1] = '\0';
         e->type = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? ENTRY_DIR : ENTRY_FILE;
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+            e->type = ENTRY_SYMLINK;
+        }
         e->size = ((uint64_t)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
         
         ULARGE_INTEGER ull;
@@ -190,11 +193,54 @@ char *pl_read_file(const char *path, size_t max_bytes, size_t *out_len) {
 }
 
 int pl_copy_file_progress(const char *src, const char *dst, ProgressCallback cb, void *userdata) {
-    return pl_copy_file(src, dst);
+    FILE *fin = fopen(src, "rb");
+    if (!fin) return -1;
+    FILE *fout = fopen(dst, "wb");
+    if (!fout) { fclose(fin); return -1; }
+    
+    uint64_t total = pl_file_size(src);
+    uint64_t done = 0;
+    char buf[65536];
+    size_t n;
+    int result = 0;
+    
+    while ((n = fread(buf, 1, sizeof(buf), fin)) > 0) {
+        if (fwrite(buf, 1, n, fout) != n) {
+            result = -1;
+            break;
+        }
+        done += n;
+        if (cb && cb(done, total, src, userdata) == 0) {
+            result = -1;
+            break;
+        }
+    }
+    
+    fclose(fin);
+    fclose(fout);
+    if (result != 0) DeleteFileA(dst);
+    return result;
 }
 
 int pl_copy_dir_progress(const char *src, const char *dst, ProgressCallback cb, void *userdata) {
-    return pl_copy_dir(src, dst);
+    if (!CreateDirectoryA(dst, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) return -1;
+    
+    PlatformDirEntry *entries;
+    int count;
+    if (pl_list_dir(src, &entries, &count) != 0) return -1;
+    
+    for (int i = 0; i < count; i++) {
+        char *src_path = pl_path_join(src, entries[i].name);
+        char *dst_path = pl_path_join(dst, entries[i].name);
+        int ret = (entries[i].type == ENTRY_DIR) ?
+                  pl_copy_dir_progress(src_path, dst_path, cb, userdata) :
+                  pl_copy_file_progress(src_path, dst_path, cb, userdata);
+        free(src_path);
+        free(dst_path);
+        if (ret != 0) { free(entries); return -1; }
+    }
+    free(entries);
+    return 0;
 }
 
 #endif

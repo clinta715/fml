@@ -2,13 +2,13 @@
 #include "panel.h"
 #include "preview.h"
 #include "platform.h"
-#include <ncurses.h>
+#include "compat.h"
 #include <signal.h>
 #include <ctype.h>
-#include <strings.h>
 
 static UILayout g_layout;
 
+#ifndef _WIN32
 static void handle_sigwinch(int sig) {
     (void)sig;
     endwin();
@@ -16,6 +16,7 @@ static void handle_sigwinch(int sig) {
     clear();
     ui_resize();
 }
+#endif
 
 static void init_colors(void) {
     if (!has_colors()) return;
@@ -162,9 +163,11 @@ int ui_init(void) {
     
     init_colors();
     
+#ifndef _WIN32
     struct sigaction sa = {0};
     sa.sa_handler = handle_sigwinch;
     sigaction(SIGWINCH, &sa, NULL);
+#endif
     
     ui_resize();
     return 0;
@@ -317,39 +320,39 @@ static const char* get_file_icon(const char *name, EntryType type) {
     if (!ext) return "📄";
     ext++;
     
-    if (strcasecmp(ext, "zip") == 0 || strcasecmp(ext, "tar") == 0 ||
-        strcasecmp(ext, "gz") == 0 || strcasecmp(ext, "bz2") == 0 ||
-        strcasecmp(ext, "xz") == 0 || strcasecmp(ext, "7z") == 0 ||
-        strcasecmp(ext, "rar") == 0) return "📦";
+    if (FML_STRCASECMP(ext, "zip") == 0 || FML_STRCASECMP(ext, "tar") == 0 ||
+        FML_STRCASECMP(ext, "gz") == 0 || FML_STRCASECMP(ext, "bz2") == 0 ||
+        FML_STRCASECMP(ext, "xz") == 0 || FML_STRCASECMP(ext, "7z") == 0 ||
+        FML_STRCASECMP(ext, "rar") == 0) return "📦";
     
-    if (strcasecmp(ext, "jpg") == 0 || strcasecmp(ext, "jpeg") == 0 ||
-        strcasecmp(ext, "png") == 0 || strcasecmp(ext, "gif") == 0 ||
-        strcasecmp(ext, "bmp") == 0 || strcasecmp(ext, "svg") == 0 ||
-        strcasecmp(ext, "webp") == 0 || strcasecmp(ext, "ico") == 0) return "🖼️";
+    if (FML_STRCASECMP(ext, "jpg") == 0 || FML_STRCASECMP(ext, "jpeg") == 0 ||
+        FML_STRCASECMP(ext, "png") == 0 || FML_STRCASECMP(ext, "gif") == 0 ||
+        FML_STRCASECMP(ext, "bmp") == 0 || FML_STRCASECMP(ext, "svg") == 0 ||
+        FML_STRCASECMP(ext, "webp") == 0 || FML_STRCASECMP(ext, "ico") == 0) return "🖼️";
     
-    if (strcasecmp(ext, "mp3") == 0 || strcasecmp(ext, "wav") == 0 ||
-        strcasecmp(ext, "flac") == 0 || strcasecmp(ext, "ogg") == 0 ||
-        strcasecmp(ext, "m4a") == 0 || strcasecmp(ext, "aac") == 0) return "🎵";
+    if (FML_STRCASECMP(ext, "mp3") == 0 || FML_STRCASECMP(ext, "wav") == 0 ||
+        FML_STRCASECMP(ext, "flac") == 0 || FML_STRCASECMP(ext, "ogg") == 0 ||
+        FML_STRCASECMP(ext, "m4a") == 0 || FML_STRCASECMP(ext, "aac") == 0) return "🎵";
     
-    if (strcasecmp(ext, "mp4") == 0 || strcasecmp(ext, "avi") == 0 ||
-        strcasecmp(ext, "mkv") == 0 || strcasecmp(ext, "mov") == 0 ||
-        strcasecmp(ext, "webm") == 0 || strcasecmp(ext, "flv") == 0) return "🎬";
+    if (FML_STRCASECMP(ext, "mp4") == 0 || FML_STRCASECMP(ext, "avi") == 0 ||
+        FML_STRCASECMP(ext, "mkv") == 0 || FML_STRCASECMP(ext, "mov") == 0 ||
+        FML_STRCASECMP(ext, "webm") == 0 || FML_STRCASECMP(ext, "flv") == 0) return "🎬";
     
-    if (strcasecmp(ext, "c") == 0 || strcasecmp(ext, "h") == 0 ||
-        strcasecmp(ext, "cpp") == 0 || strcasecmp(ext, "py") == 0 ||
-        strcasecmp(ext, "js") == 0 || strcasecmp(ext, "ts") == 0 ||
-        strcasecmp(ext, "rs") == 0 || strcasecmp(ext, "go") == 0) return "⚙️";
+    if (FML_STRCASECMP(ext, "c") == 0 || FML_STRCASECMP(ext, "h") == 0 ||
+        FML_STRCASECMP(ext, "cpp") == 0 || FML_STRCASECMP(ext, "py") == 0 ||
+        FML_STRCASECMP(ext, "js") == 0 || FML_STRCASECMP(ext, "ts") == 0 ||
+        FML_STRCASECMP(ext, "rs") == 0 || FML_STRCASECMP(ext, "go") == 0) return "⚙️";
     
-    if (strcasecmp(ext, "html") == 0 || strcasecmp(ext, "css") == 0 ||
-        strcasecmp(ext, "json") == 0 || strcasecmp(ext, "xml") == 0) return "🌐";
+    if (FML_STRCASECMP(ext, "html") == 0 || FML_STRCASECMP(ext, "css") == 0 ||
+        FML_STRCASECMP(ext, "json") == 0 || FML_STRCASECMP(ext, "xml") == 0) return "🌐";
     
-    if (strcasecmp(ext, "md") == 0 || strcasecmp(ext, "txt") == 0 ||
-        strcasecmp(ext, "doc") == 0 || strcasecmp(ext, "docx") == 0) return "📝";
+    if (FML_STRCASECMP(ext, "md") == 0 || FML_STRCASECMP(ext, "txt") == 0 ||
+        FML_STRCASECMP(ext, "doc") == 0 || FML_STRCASECMP(ext, "docx") == 0) return "📝";
     
-    if (strcasecmp(ext, "pdf") == 0) return "📕";
+    if (FML_STRCASECMP(ext, "pdf") == 0) return "📕";
     
-    if (strcasecmp(ext, "sh") == 0 || strcasecmp(ext, "bash") == 0 ||
-        strcasecmp(ext, "zsh") == 0) return "💻";
+    if (FML_STRCASECMP(ext, "sh") == 0 || FML_STRCASECMP(ext, "bash") == 0 ||
+        FML_STRCASECMP(ext, "zsh") == 0) return "💻";
     
     return "📄";
 }
@@ -363,25 +366,25 @@ static int get_file_color(const char *name, EntryType type) {
     if (!ext) return COLOR_FILE;
     ext++;
     
-    if (strcasecmp(ext, "zip") == 0 || strcasecmp(ext, "tar") == 0 ||
-        strcasecmp(ext, "gz") == 0 || strcasecmp(ext, "bz2") == 0 ||
-        strcasecmp(ext, "xz") == 0 || strcasecmp(ext, "7z") == 0 ||
-        strcasecmp(ext, "rar") == 0) {
+    if (FML_STRCASECMP(ext, "zip") == 0 || FML_STRCASECMP(ext, "tar") == 0 ||
+        FML_STRCASECMP(ext, "gz") == 0 || FML_STRCASECMP(ext, "bz2") == 0 ||
+        FML_STRCASECMP(ext, "xz") == 0 || FML_STRCASECMP(ext, "7z") == 0 ||
+        FML_STRCASECMP(ext, "rar") == 0) {
         return COLOR_ARCHIVE;
     }
     
-    if (strcasecmp(ext, "jpg") == 0 || strcasecmp(ext, "jpeg") == 0 ||
-        strcasecmp(ext, "png") == 0 || strcasecmp(ext, "gif") == 0 ||
-        strcasecmp(ext, "mp3") == 0 || strcasecmp(ext, "mp4") == 0 ||
-        strcasecmp(ext, "avi") == 0 || strcasecmp(ext, "mkv") == 0) {
+    if (FML_STRCASECMP(ext, "jpg") == 0 || FML_STRCASECMP(ext, "jpeg") == 0 ||
+        FML_STRCASECMP(ext, "png") == 0 || FML_STRCASECMP(ext, "gif") == 0 ||
+        FML_STRCASECMP(ext, "mp3") == 0 || FML_STRCASECMP(ext, "mp4") == 0 ||
+        FML_STRCASECMP(ext, "avi") == 0 || FML_STRCASECMP(ext, "mkv") == 0) {
         return COLOR_MEDIA;
     }
     
-    if (strcasecmp(ext, "c") == 0 || strcasecmp(ext, "h") == 0 ||
-        strcasecmp(ext, "cpp") == 0 || strcasecmp(ext, "py") == 0 ||
-        strcasecmp(ext, "js") == 0 || strcasecmp(ext, "html") == 0 ||
-        strcasecmp(ext, "css") == 0 || strcasecmp(ext, "java") == 0 ||
-        strcasecmp(ext, "rs") == 0 || strcasecmp(ext, "go") == 0) {
+    if (FML_STRCASECMP(ext, "c") == 0 || FML_STRCASECMP(ext, "h") == 0 ||
+        FML_STRCASECMP(ext, "cpp") == 0 || FML_STRCASECMP(ext, "py") == 0 ||
+        FML_STRCASECMP(ext, "js") == 0 || FML_STRCASECMP(ext, "html") == 0 ||
+        FML_STRCASECMP(ext, "css") == 0 || FML_STRCASECMP(ext, "java") == 0 ||
+        FML_STRCASECMP(ext, "rs") == 0 || FML_STRCASECMP(ext, "go") == 0) {
         return COLOR_CODE;
     }
     
@@ -390,9 +393,10 @@ static int get_file_color(const char *name, EntryType type) {
 
 static char* shorten_path(const char *path) {
     static char shortened[MAX_PATH];
-    const char *home = getenv("HOME");
+    char *home = pl_home_dir();
     if (home && strncmp(path, home, strlen(home)) == 0) {
         snprintf(shortened, sizeof(shortened), "~%s", path + strlen(home));
+        free(home);
     } else if (strlen(path) > 40) {
         snprintf(shortened, sizeof(shortened), "...%s", path + strlen(path) - 37);
     } else {
@@ -513,11 +517,11 @@ void ui_draw_preview(Panel *p, int x, int y, int w, int h) {
     if (content) {
         attron(COLOR_PAIR(COLOR_PREVIEW));
         int line = y + 1;
-        char *saveptr;
-        char *line_str = strtok_r(content, "\n", &saveptr);
+        char *saveptr = NULL;
+        char *line_str = FML_STRTOK_R(content, "\n", &saveptr);
         while (line_str && line < y + h) {
             mvprintw(line, x + 1, "%-*.*s", w - 2, w - 2, line_str);
-            line_str = strtok_r(NULL, "\n", &saveptr);
+            line_str = FML_STRTOK_R(NULL, "\n", &saveptr);
             line++;
         }
         attroff(COLOR_PAIR(COLOR_PREVIEW));

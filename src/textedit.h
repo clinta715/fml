@@ -2,7 +2,7 @@
 #define TEXTEDIT_H
 
 #include "fml.h"
-#include <ncurses.h>
+#include "compat.h"
 #include <stdbool.h>
 
 #define MAX_UNDO 4096

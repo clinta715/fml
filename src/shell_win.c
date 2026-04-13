@@ -1,6 +1,7 @@
 #ifdef _WIN32
 
 #include "shell.h"
+#include "compat.h"
 #include <windows.h>
 
 int shell_spawn(const char *path) {

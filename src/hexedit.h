@@ -2,7 +2,7 @@
 #define HEXEDIT_H
 
 #include "fml.h"
-#include <ncurses.h>
+#include "compat.h"
 
 typedef struct {
     char path[MAX_PATH];

@@ -1,8 +1,6 @@
 #include "panel.h"
 #include "platform.h"
-#include <fnmatch.h>
-#include <strings.h>
-#include <libgen.h>
+#include "compat.h"
 
 static const Panel *g_sort_panel = NULL;
 
@@ -38,13 +36,13 @@ static int entry_cmp(const void *a, const void *b) {
         case SORT_EXT: {
             const char *exta = get_ext(ea->name);
             const char *extb = get_ext(eb->name);
-            cmp = strcasecmp(exta, extb);
-            if (cmp == 0) cmp = strcasecmp(ea->name, eb->name);
+            cmp = FML_STRCASECMP(exta, extb);
+            if (cmp == 0) cmp = FML_STRCASECMP(ea->name, eb->name);
             break;
         }
         case SORT_NAME:
         default:
-            cmp = strcasecmp(ea->name, eb->name);
+            cmp = FML_STRCASECMP(ea->name, eb->name);
             break;
     }
     
@@ -92,7 +90,7 @@ int panel_refresh(Panel *p) {
         return -1;
     }
     
-    int has_parent = (strcmp(p->path, "/") != 0);
+    int has_parent = fml_has_parent_path(p->path);
     p->entries = xmalloc((raw_count + has_parent + 1) * sizeof(DirEntry));
     int out_idx = 0;
     
@@ -109,7 +107,7 @@ int panel_refresh(Panel *p) {
         if (!p->show_hidden && raw_entries[i].name[0] == '.') {
             continue;
         }
-        if (p->search_filter[0] && fnmatch(p->search_filter, raw_entries[i].name, 0) != 0) {
+        if (p->search_filter[0] && fml_fnmatch(p->search_filter, raw_entries[i].name) != 0) {
             continue;
         }
         
@@ -212,7 +210,16 @@ int panel_enter(Panel *p) {
 
 int panel_parent(Panel *p) {
     char *parent = xstrdup(p->path);
-    char *last = strrchr(parent, '/');
+    char *last_slash = strrchr(parent, '/');
+    char *last_backslash = strrchr(parent, '\\');
+    char *last = last_slash;
+    if (last_backslash && (!last || last_backslash > last)) last = last_backslash;
+#ifdef _WIN32
+    if (last && parent[1] == ':' && last == parent + 2) {
+        free(parent);
+        return -1;
+    }
+#endif
     if (last && last != parent) {
         const char *child = last + 1;
         char saved[MAX_NAME];
@@ -287,7 +294,7 @@ void panel_select_all(Panel *p, bool select) {
 
 void panel_select_pattern(Panel *p, const char *pattern, bool select) {
     for (int i = 0; i < p->count; i++) {
-        if (fnmatch(pattern, p->entries[i].name, 0) == 0) {
+        if (fml_fnmatch(pattern, p->entries[i].name) == 0) {
             p->entries[i].selected = select;
         }
     }

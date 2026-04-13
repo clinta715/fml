@@ -19,13 +19,14 @@ A tiny, portable, text-mode dual-pane file manager written in C. Inspired by cla
 - **Smart cursor**: Cursor position is preserved when navigating up/down directories, refreshing after file operations, and toggling hidden files
 - **Page navigation**: Page Up/Page Down/Home/End with proper scroll tracking
 - **Cross-filesystem moves**: Files are automatically copied and deleted when moving across filesystems
+- **Cross-platform**: Runs on Linux, macOS, and Windows (via MSYS2/MinGW with PDCurses)
 
 ## Building
 
 ### Dependencies
 
 - C11 compiler (gcc, clang, etc.)
-- ncurses library
+- ncurses library (Linux/macOS) or PDCurses (Windows)
 
 ### Linux/macOS
 
@@ -56,15 +57,19 @@ brew install ncurses
 make
 ```
 
-### Windows (WSL or MSYS2)
+### Windows (MSYS2/MinGW)
 
 ```bash
-# WSL
-sudo apt install build-essential libncurses5-dev
+# Install MSYS2 from https://www.msys2.org/
+# Open the MSYS2 MinGW 64-bit terminal, then:
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-pdcurses make
 make
+```
 
-# MSYS2
-pacman -S mingw-w64-x86_64-ncurses
+### Windows (WSL)
+
+```bash
+sudo apt install build-essential libncurses5-dev
 make
 ```
 

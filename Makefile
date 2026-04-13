@@ -1,17 +1,27 @@
-CC = clang
-CFLAGS = -Wall -Wextra -Wpedantic -std=c11 -O2 -D_DEFAULT_SOURCE
+CC ?= clang
+CFLAGS = -Wall -Wextra -Wpedantic -std=c11 -O2
 LDFLAGS = -lncurses
 
 SRCDIR = src
 OBJDIR = obj
 TARGET = fml
 
-UNAME_S := $(shell uname -s)
+UNAME_S := $(shell uname -s 2>/dev/null)
+
+ifdef MSYSTEM
+  UNAME_S := MSYS2
+endif
+
 ifeq ($(UNAME_S),Darwin)
-CFLAGS += -D_DARWIN_C_SOURCE
+  CFLAGS += -D_DARWIN_C_SOURCE
 endif
 ifeq ($(UNAME_S),Linux)
-CFLAGS += -D_DEFAULT_SOURCE
+  CFLAGS += -D_DEFAULT_SOURCE
+endif
+ifeq ($(UNAME_S),MSYS2)
+  CC ?= gcc
+  CFLAGS += -D_DEFAULT_SOURCE
+  LDFLAGS = -lpdcurses -lshlwapi
 endif
 
 SOURCES = $(wildcard $(SRCDIR)/*.c)
